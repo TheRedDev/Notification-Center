@@ -7,10 +7,12 @@ Version 24.03
 
 const ExtensionUtils      = imports.misc.extensionUtils;
 const Gtk                 = imports.gi.Gtk;
+const Gdk                 = imports.gi.Gdk;
+const GObject             = imports.gi.GObject;
 const LangClass           = imports.lang.Class;
 const Main                = imports.ui.main;
 const MetaKeyBindingFlags = imports.gi.Meta.KeyBindingFlags;
-const PanelMenuButton     = imports.ui.panelMenu.Button;
+const PanelMenu           = imports.ui.panelMenu;
 const PopupMenu           = imports.ui.popupMenu;
 const ShellActionMode     = imports.gi.Shell.ActionMode;
 const St                  = imports.gi.St;
@@ -52,16 +54,14 @@ function reloadExtensionOnPrefsChange() {
 
 }
 
-const NotificationCenter = new LangClass({
+const NotificationCenter = GObject.registerClass(
+class NotificationCenter extends PanelMenu.Button {
 
-  Name: "NotificationCenter",
-  Extends: PanelMenuButton,
-
-  _init: function () {
+  _init() {
 
     ExtensionUtils.initTranslations("notification-center");
     this.prefs = ExtensionUtils.getSettings("org.gnome.shell.extensions.notification-center");
-    this.parent(1-0.5*this.prefs.get_enum('indicator-pos'), "NotificationCenter");   
+    super._init(1-0.5*this.prefs.get_enum('indicator-pos'), "NotificationCenter");   
     this._messageList                = Main.panel.statusArea.dateMenu._messageList;
     this._messageListParent          = this._messageList.get_parent();
     this.mediaSection                = this._messageList._mediaSection;
@@ -108,9 +108,9 @@ const NotificationCenter = new LangClass({
     this.add_style_class_name('notification-center-panel-button');
     this.notificationIcon.set_pivot_point(0.5, 0);    
     
-  },
+  }
 
-  _onOpenStateChanged: function(menu,open) {
+  _onOpenStateChanged(menu,open) {
 
     if(!open) {
       this.resetIndicator();
@@ -130,9 +130,9 @@ const NotificationCenter = new LangClass({
     this.seenEvents = true;
     this.resetIndicator();
 
-  },
+  }
 
-  animateOnNewNotification: function( times, op=254, angle=3 ) {
+  animateOnNewNotification( times, op=254, angle=3 ) {
 
     [ this.visible, this.notificationIcon.visible ] = [ true, true ];
     if(times == 0 || this.notAnimateIcon) {
@@ -158,9 +158,9 @@ const NotificationCenter = new LangClass({
       onComplete: ()=>  this.animateOnNewNotification(--times, op-1, -angle)
     });
       
-  },
+  }
 
-  blinkIcon: function( blinkTimes, interval, opacity ) {
+  blinkIcon( blinkTimes, interval, opacity ) {
   
     this.manageAutohide();
     if(blinkTimes > 0) {
@@ -171,22 +171,22 @@ const NotificationCenter = new LangClass({
       });
     }
 
-  },
+  }
 
-  blinkIconStopIfBlinking: function() {
+  blinkIconStopIfBlinking() {
 
     this.notificationIcon.remove_all_transitions();
     this.notificationIcon.set_opacity(255);
 
-  },
+  }
 
-  dndToggle: function() {
+  dndToggle() {
 
     this.dndpref.set_boolean('show-banners',!this.dndpref.get_boolean('show-banners'));
 
-  },
+  }
 
-  loadDndStatus: function () {
+  loadDndStatus() {
 
     this.isDndOff = this.dndpref.get_boolean("show-banners");
     this.dndItem.setToggleState(!this.isDndOff);
@@ -202,8 +202,8 @@ const NotificationCenter = new LangClass({
       return false;
     }
  
-    if(Gtk.IconTheme.get_default())  {
-      if(Gtk.IconTheme.get_default().has_icon("notifications-disabled-symbolic")) {
+    if(Gdk.Display.get_default() && Gtk.IconTheme.get_for_display(Gdk.Display.get_default()))  {
+      if(Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).has_icon("notifications-disabled-symbolic")) {
         this.notificationIcon.icon_name = "notifications-disabled-symbolic";
       }
     }
@@ -215,9 +215,9 @@ const NotificationCenter = new LangClass({
     
     return true;
 
-  },
+  }
 
-  loadPreferences: function() {
+  loadPreferences() {
 
     this.autohide                     = this.prefs.get_int("autohide");
     this.mediaSectionToBeShown        = (this.prefs.get_int("show-media")>0)?true:false;
@@ -242,9 +242,9 @@ const NotificationCenter = new LangClass({
     this.showLabel                    = this.prefs.get_boolean("show-label");
     this.changeIcons                  = this.prefs.get_boolean("change-icons");  
 
-  },
+  }
 
-  manageAutohide: function() {
+  manageAutohide() {
 
     if(!this.menu.isOpen) {
       this.mediaIcon.visible        = this.mediaSection._shouldShow() && this.showThreeIcons && this.mediaSectionToBeShown;
@@ -265,9 +265,9 @@ const NotificationCenter = new LangClass({
       this.box.style_class = (this.noNotificationLabel.visible) ? "notification-center-message-list-empty" : "notification-center-message-list";      
     }
 
-  },
+  }
 
-  manageEvents: function(action) {
+  manageEvents(action) {
 
     this.eventsSection.visible = this.showEventsSectionIfEmpty || this.shouldShowEventsSection() ;       
     if(this.showEventsInCalendarAlso == true) {
@@ -290,9 +290,9 @@ const NotificationCenter = new LangClass({
           return;
       }
     }
-  },
+  }
 
-  manageLabel:function(nCount,eCount) {
+  manageLabel(nCount,eCount) {
 
     this.notificationLabel.visible = nCount*this.newNotificationAction;
     this.eventsLabel.visible = eCount*this.newNotificationAction && (this.shouldShowEventsSection() > 0);
@@ -310,16 +310,16 @@ const NotificationCenter = new LangClass({
       }
     }
 
-  },
+  }
 
-  manageIconChange: function(statusIcon) {
+  manageIconChange(statusIcon) {
 
     let iconName = statusIcon ? "notification-center-full" : "notification-center-empty";
     this.notificationIcon.icon_name = iconName;
     
-  },
+  }
 
-  middleClickDndToggle: function (actor, event) {
+  middleClickDndToggle(actor, event) {
 
     switch(event.get_button()) {
 
@@ -338,9 +338,9 @@ const NotificationCenter = new LangClass({
 
       }
 
-  },
+  }
 
-  newNotif: function(messageType) {
+  newNotif(messageType) {
   
     switch(messageType) {
       case "media":
@@ -371,9 +371,9 @@ const NotificationCenter = new LangClass({
     }
     this.resetIndicator();
 
-  },
+  }
 
-  remNotif: function(messageType) {
+  remNotif(messageType) {
     
     switch(messageType) {
       case "media" :
@@ -388,7 +388,7 @@ const NotificationCenter = new LangClass({
     }
     this.resetIndicator();
 
-  },
+  }
   
   removeSection(section) {
 
@@ -400,9 +400,9 @@ const NotificationCenter = new LangClass({
     this._messageList._sectionList.remove_actor(section);
     this._messageList._sync();
 
-  },
+  }
 
-  resetIndicator: function() {
+  resetIndicator() {
 
     this.manageAutohide();
     this.clearButton.visible = this.notificationSection._canClear && this.notificationSectionToBeShown;
@@ -411,38 +411,38 @@ const NotificationCenter = new LangClass({
       this.manageLabel((this.notificationCount + (!this.showThreeIcons)*this.eventsCount) ,(this.showThreeIcons)*this.eventsCount);
     }
 
-  },
+  }
 
-  setNotificationIconName: function () {
+  setNotificationIconName() {
   
-    if(Gtk.IconTheme.get_default()) {
-      this.notificationIconName = Gtk.IconTheme.get_default().has_icon("notification-symbolic")?"notification-symbolic":"preferences-system-notifications-symbolic";
+    if(Gdk.Display.get_default() && Gtk.IconTheme.get_for_display(Gdk.Display.get_default())) {
+      this.notificationIconName = Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).has_icon("notification-symbolic")?"notification-symbolic":"preferences-system-notifications-symbolic";
     }
     else {
       this.notificationIconName = "preferences-system-notifications-symbolic";
     }
     
-  },
+  }
 
-  iconThemeChanged: function() {
+  iconThemeChanged() {
   
     this.setNotificationIconName();
     this.loadDndStatus();
     
-  },
+  }
   
-  shouldShowEventsSection: function() {
+  shouldShowEventsSection() {
   
     switch(this.eventsSection._eventsList.get_children().length) {
       case 0:
         return 0;
       default:
-        return (this.eventsSection._eventsList.get_children()[0].style_class == 'event-placeholder') ? 0: this.eventsSection._eventsList.get_children().length;
+        return (this.eventsSection._eventsList.get_children()[0].text == _("No Events")) ? 0: this.eventsSection._eventsList.get_children().length;
     }
   
-  },  
+  }
 
-  startNotificationCenter: function() {
+  startNotificationCenter() {
 
     if(this.prefs.get_double("current-version") < 23.03) {    
       Main.notify("Notification Center","Extension is updated. Please Complete the update process in the extension preferences.");
@@ -610,9 +610,9 @@ const NotificationCenter = new LangClass({
       this.originalEventsSectionParent.remove_actor(Main.panel.statusArea.dateMenu._clocksItem);
     }    
      
-  },
+  }
   
-  undoChanges: function () {
+  undoChanges() {
   
     if(this._indicator.get_children().length == 0) {    
       return;
@@ -705,7 +705,7 @@ const NotificationCenter = new LangClass({
     this.prefs.disconnect(this.reloadSignal);
     this.prefs.disconnect(this.reloadProfilesSignal);
 
-  },
+  }
   
 });
 
